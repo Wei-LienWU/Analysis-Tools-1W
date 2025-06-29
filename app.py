@@ -66,4 +66,12 @@ Please write a brief analysis in English, including trend, average, maximum, min
                             {"role": "user", "content": prompt}
                         ]
                     )
-                    summary = response.choi
+                    summary = response.choices[0].message.content
+                    # 移除所有非 ASCII 字元，避免編碼錯誤
+                    summary_clean = summary.encode('ascii', errors='ignore').decode()
+                    st.success("Analysis complete")
+                    st.markdown(summary_clean)
+                except Exception as e:
+                    st.error(f"Error: {e}")
+    else:
+        st.info("Please enter API Key to enable GPT analysis.")
