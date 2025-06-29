@@ -2,27 +2,18 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-import re
 from openai import OpenAI
 
-# 移除 emoji 函式
-def remove_emoji(text):
-    emoji_pattern = re.compile(
-        "["
-        "\U0001F600-\U0001F64F"  # emoticons
-        "\U0001F300-\U0001F5FF"  # symbols & pictographs
-        "\U0001F680-\U0001F6FF"  # transport & map symbols
-        "\U0001F1E0-\U0001F1FF"  # flags
-        "]+", flags=re.UNICODE)
-    return emoji_pattern.sub(r'', text)
-
+# 頁面設定
 st.set_page_config(page_title="Analysis Tools 1W", layout="centered")
-st.title("Analysis Tools 1W - Automated Report Generator")
-st.markdown("Upload an Excel or CSV file to automatically generate charts and GPT summary.")
+st.title("Analysis Tools 1W - 自動報表產生工具")
+st.markdown("上傳 Excel 或 CSV 檔案，自動產生圖表與 GPT 中文摘要。")
 
-openai_api_key = st.text_input("Please enter your OpenAI API Key", type="password")
+# 使用者輸入 API Key
+openai_api_key = st.text_input("請輸入你的 OpenAI API Key", type="password")
 
-uploaded_file = st.file_uploader("Upload an Excel or CSV file", type=["csv", "xlsx"])
+# 檔案上傳
+uploaded_file = st.file_uploader("請上傳 Excel 或 CSV 檔案", type=["csv", "xlsx"])
 
 if uploaded_file is not None:
     try:
@@ -31,52 +22,51 @@ if uploaded_file is not None:
         else:
             df = pd.read_excel(uploaded_file)
     except Exception as e:
-        st.error(f"Failed to read the file: {e}")
+        st.error(f"檔案讀取失敗：{e}")
         st.stop()
 
-    st.subheader("Data Preview")
+    st.subheader("資料預覽")
     st.dataframe(df.head())
 
+    # 選擇數值欄位
     numeric_cols = df.select_dtypes(include="number").columns.tolist()
     if not numeric_cols:
-        st.warning("No numeric columns found.")
+        st.warning("找不到數值欄位")
         st.stop()
 
-    selected_col = st.selectbox("Please select the numeric column to analyze", numeric_cols)
+    selected_col = st.selectbox("請選擇要分析的數值欄位", numeric_cols)
 
-    st.subheader("Chart Display")
+    # 顯示圖表
+    st.subheader("圖表呈現")
     fig, ax = plt.subplots()
-    df[selected_col].plot(kind="line", ax=ax, title=f"{selected_col} Data Trend")
+    df[selected_col].plot(kind="line", ax=ax, title=f"{selected_col} 數據趨勢")
     st.pyplot(fig)
 
+    # GPT 分析
     if openai_api_key:
-        st.subheader("GPT Analysis Summary")
+        st.subheader("GPT 分析摘要")
         data_list = df[selected_col].dropna().tolist()[:100]
         prompt = f"""
-You are a data analyst. Based on the following values in the column '{selected_col}':
+你是一位數據分析師。根據以下欄位 {selected_col} 的數值：
 {data_list}
-Please write a brief analysis in English, including trend, average, maximum, minimum values, and provide recommendations.
+請用繁體中文撰寫簡要分析，包括趨勢、平均值、最大最小值，並提供建議。
 """
 
-        if st.button("Generate Summary"):
-            with st.spinner("Generating, please wait..."):
+        if st.button("產生摘要"):
+            with st.spinner("生成中，請稍候..."):
                 try:
                     client = OpenAI(api_key=openai_api_key)
                     response = client.chat.completions.create(
                         model="gpt-4",
                         messages=[
-                            {
-                                "role": "system",
-                                "content": "You are a data analyst consultant skilled in English. Please do NOT use any emoji or special symbols in your response."
-                            },
+                            {"role": "system", "content": "你是一位善於分析資料的中文顧問。"},
                             {"role": "user", "content": prompt}
-                        ],
+                        ]
                     )
                     summary = response.choices[0].message.content
-                    summary_clean = remove_emoji(summary)
-                    st.success("Analysis complete")
-                    st.markdown(summary_clean)
+                    st.success("分析完成")
+                    st.markdown(summary)
                 except Exception as e:
-                    st.error(f"Error: {e}")
+                    st.error(f"錯誤：{e}")
     else:
-        st.info("Please enter API Key to enable GPT analysis.")
+        st.info("請輸入 API Key 才能使用 GPT 分析功能")
