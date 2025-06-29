@@ -752,34 +752,7 @@ if uploaded_file is not None:
         )
 
 else:
-    # 安裝指南
-    st.info("👆 請上傳檔案開始分析")
-    
-    with st.expander("📦 套件安裝指南"):
-        st.markdown("""
-        ### 必要套件 (已包含在基本版本)
-        ```bash
-        pip install streamlit pandas matplotlib numpy
-        ```
-        
-        ### 可選套件 (增強功能)
-        ```bash
-        # 統計分析
-        pip install scipy
-        
-        # 互動圖表
-        pip install plotly
-        
-        # 美化圖表
-        pip install seaborn
-        ```
-        
-        ### 完整安裝
-        ```bash
-        pip install streamlit pandas matplotlib numpy scipy plotly seaborn
-        ```
-        """)
-    
+    # 功能說明
     with st.expander("🎯 功能說明"):
         st.markdown("""
         ### 基礎功能 (無需額外套件)
