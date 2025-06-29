@@ -53,21 +53,25 @@ if uploaded_file is not None:
 請用繁體中文撰寫一段簡潔的分析摘要，包含趨勢變化、平均值、最高與最低值，並給出一項建議。
 """
 
-        if st.button("✨ 產生摘要"):
-            with st.spinner("GPT 正在撰寫摘要..."):
-                try:
-                    openai.api_key = openai_api_key
-                    response = openai.ChatCompletion.create(
-                        model="gpt-4",
-                        messages=[
-                            {"role": "system", "content": "你是一位善於中文資料分析的專業顧問。"},
-                            {"role": "user", "content": prompt}
-                        ]
-                    )
-                    summary = response['choices'][0]['message']['content']
-                    st.success("✅ 分析完成")
-                    st.markdown(summary)
-                except Exception as e:
-                    st.error(f"錯誤：{e}")
-    else:
-        st.info("請輸入 OpenAI API Key 以啟用 GPT 分析摘要功能。")
+import openai
+from openai import OpenAI
+
+# 建立 OpenAI client
+if openai_api_key:
+    client = OpenAI(api_key=openai_api_key)
+
+    if st.button("✨ 產生摘要"):
+        with st.spinner("GPT 正在撰寫摘要..."):
+            try:
+                response = client.chat.completions.create(
+                    model="gpt-4",
+                    messages=[
+                        {"role": "system", "content": "你是一位善於中文資料分析的專業顧問。"},
+                        {"role": "user", "content": prompt}
+                    ]
+                )
+                summary = response.choices[0].message.content
+                st.success("✅ 分析完成")
+                st.markdown(summary)
+            except Exception as e:
+                st.error(f"錯誤：{e}")
