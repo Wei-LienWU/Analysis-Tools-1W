@@ -114,6 +114,11 @@ if uploaded_file is not None:
         if st.button("產生 GPT 分析摘要"):
             with st.spinner("正在生成分析摘要，請稍候..."):
                 
+                # 首先測試 API Key 格式
+                if not openai_api_key.startswith('sk-'):
+                    st.error("API Key 格式不正確，應該以 'sk-' 開頭")
+                    st.stop()
+                
                 # 定義分析函數，完全隔離 OpenAI 調用
                 def call_openai_safe():
                     import os
@@ -124,7 +129,12 @@ if uploaded_file is not None:
                     # 只使用基本 ASCII 字符的 prompt
                     basic_prompt = f"Data analysis: mean={mean_val}, median={median_val}, std={std_val}, min={min_val}, max={max_val}, count={count_val}. Please analyze in Traditional Chinese."
                     
+                    # 顯示調試信息
+                    st.info("正在連接 OpenAI API...")
+                    
                     client = OpenAI(api_key=openai_api_key)
+                    
+                    st.info("發送請求中...")
                     
                     response = client.chat.completions.create(
                         model="gpt-3.5-turbo",
@@ -132,7 +142,8 @@ if uploaded_file is not None:
                             {"role": "system", "content": "Data analyst. Reply in Traditional Chinese."},
                             {"role": "user", "content": basic_prompt}
                         ],
-                        max_tokens=300
+                        max_tokens=300,
+                        timeout=30
                     )
                     
                     return response.choices[0].message.content
@@ -153,12 +164,40 @@ if uploaded_file is not None:
                         except:
                             st.info("分析完成，但顯示時發生編碼問題")
                             
-                except Exception:
+                except Exception as e:
                     st.error("分析失敗")
-                    st.info("可能的原因：")
-                    st.info("1. API Key 不正確")
-                    st.info("2. 網路連線問題") 
-                    st.info("3. API 額度不足")
+                    
+                    # 更詳細的錯誤診斷
+                    error_type = type(e).__name__
+                    st.write(f"錯誤類型: {error_type}")
+                    
+                    if "AuthenticationError" in error_type:
+                        st.error("API Key 驗證失敗")
+                        st.info("請確認:")
+                        st.info("- API Key 是否正確複製")
+                        st.info("- API Key 是否有效且未過期")
+                    elif "RateLimitError" in error_type:
+                        st.error("API 使用率限制")
+                        st.info("請稍後再試或檢查帳戶額度")
+                    elif "APIConnectionError" in error_type:
+                        st.error("網路連線問題")
+                        st.info("請檢查網路連線")
+                    elif "Timeout" in error_type:
+                        st.error("請求超時")
+                        st.info("請稍後再試")
+                    else:
+                        st.info("其他可能原因:")
+                        st.info("1. API Key 格式錯誤")
+                        st.info("2. 帳戶餘額不足")
+                        st.info("3. 服務暫時不可用")
+                        
+                        # 安全地顯示部分錯誤信息
+                        try:
+                            error_msg = str(e)[:100]  # 只取前100個字符
+                            if len(error_msg) > 0 and all(ord(char) < 128 for char in error_msg):
+                                st.text(f"錯誤詳情: {error_msg}")
+                        except:
+                            pass
     else:
         st.info("請輸入 OpenAI API Key 才能使用 GPT 分析功能")
         st.markdown("**取得 API Key：**")
