@@ -2,8 +2,14 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-from openai import OpenAI
 import numpy as np
+import sys
+import locale
+
+# 設定編碼
+if sys.stdout.encoding != 'utf-8':
+    import codecs
+    sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'strict')
 
 # 頁面設定
 st.set_page_config(page_title="Analysis Tools 1W", layout="centered")
@@ -71,7 +77,8 @@ if uploaded_file is not None:
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
     
     # 線圖
-    df[selected_col].plot(kind="line", ax=ax1, title=f"{selected_col} 數據趨勢")
+    df[selected_col].plot(kind="line", ax=ax1)
+    ax1.set_title(f"{selected_col} 數據趨勢")
     ax1.set_xlabel("索引")
     ax1.set_ylabel(selected_col)
     
@@ -88,111 +95,88 @@ if uploaded_file is not None:
     if openai_api_key:
         st.subheader("GPT 分析摘要")
         
-        # 準備數據摘要
-        data_summary = {
-            "平均值": round(df[selected_col].mean(), 2),
-            "中位數": round(df[selected_col].median(), 2),
-            "標準差": round(df[selected_col].std(), 2),
-            "最小值": round(df[selected_col].min(), 2),
-            "最大值": round(df[selected_col].max(), 2),
-            "資料筆數": len(df[selected_col].dropna())
-        }
-        
-        # 取樣部分數據
-        sample_data = df[selected_col].dropna().head(50).tolist()
-        
-        prompt = f"""
-Analyze the following data for column: {clean_selected_col if 'clean_selected_col' in locals() else selected_col}
-
-Statistics:
-- Mean: {data_summary['平均值']}
-- Median: {data_summary['中位數']}
-- Std Dev: {data_summary['標準差']}
-- Min: {data_summary['最小值']}
-- Max: {data_summary['最大值']}
-- Count: {data_summary['資料筆數']}
-
-Sample data: {sample_data}
-
-Please provide analysis in Traditional Chinese including:
-1. Overall trends and characteristics
-2. Data distribution
-3. Any outliers
-4. Practical recommendations
-
-Keep it concise, around 200-300 words.
-"""
+        # 準備數據摘要 - 使用簡單的英文鍵值
+        try:
+            mean_val = float(df[selected_col].mean())
+            median_val = float(df[selected_col].median())
+            std_val = float(df[selected_col].std())
+            min_val = float(df[selected_col].min())
+            max_val = float(df[selected_col].max())
+            count_val = int(len(df[selected_col].dropna()))
+            
+            # 取樣部分數據，轉換為基本數值
+            sample_data = [float(x) for x in df[selected_col].dropna().head(20).tolist()]
+            
+        except Exception as e:
+            st.error(f"數據處理錯誤：{e}")
+            st.stop()
         
         if st.button("產生 GPT 分析摘要"):
             with st.spinner("正在生成分析摘要，請稍候..."):
                 try:
-                    # 清理 prompt 中的特殊字符
-                    clean_prompt = prompt.encode('utf-8', errors='ignore').decode('utf-8')
-                    clean_selected_col = selected_col.encode('ascii', errors='ignore').decode('ascii')
-                    if not clean_selected_col:
-                        clean_selected_col = "selected_column"
+                    # 動態導入 OpenAI
+                    from openai import OpenAI
                     
-                    # 初始化 OpenAI 客戶端
+                    # 創建簡單的英文提示
+                    simple_prompt = f"Analyze this data: mean={mean_val}, median={median_val}, std={std_val}, min={min_val}, max={max_val}, count={count_val}. Sample values: {sample_data}. Provide analysis in Traditional Chinese, about 200 words."
+                    
+                    # 初始化客戶端
                     client = OpenAI(api_key=openai_api_key)
                     
                     # 發送請求
                     response = client.chat.completions.create(
-                        model="gpt-4o-mini",
+                        model="gpt-3.5-turbo",
                         messages=[
-                            {
-                                "role": "system", 
-                                "content": "You are a professional data analyst. Please provide analysis in Traditional Chinese."
-                            },
-                            {
-                                "role": "user", 
-                                "content": clean_prompt
-                            }
+                            {"role": "system", "content": "You are a data analyst. Respond in Traditional Chinese."},
+                            {"role": "user", "content": simple_prompt}
                         ],
-                        max_tokens=500,
-                        temperature=0.7
+                        max_tokens=400,
+                        temperature=0.5
                     )
                     
-                    # 獲取回應並清理
+                    # 獲取並顯示結果
                     summary = response.choices[0].message.content
-                    if summary:
-                        summary = summary.encode('utf-8', errors='ignore').decode('utf-8')
                     
                     st.success("分析完成！")
                     st.markdown("### GPT 分析結果")
-                    st.markdown(summary)
                     
+                    # 安全顯示結果
+                    try:
+                        st.markdown(summary)
+                    except:
+                        st.text(summary)
+                    
+                except ImportError:
+                    st.error("請安裝 openai 套件：pip install openai")
                 except Exception as e:
-                    error_msg = str(e).encode('ascii', errors='ignore').decode('ascii')
-                    st.error(f"GPT 分析失敗：{error_msg}")
+                    # 簡化錯誤處理
+                    error_str = str(e)
+                    st.error("GPT 分析失敗")
                     
-                    # 提供詳細錯誤資訊
-                    error_lower = error_msg.lower()
-                    if "authentication" in error_lower or "unauthorized" in error_lower:
-                        st.error("請檢查 API Key 是否正確")
-                    elif "quota" in error_lower or "billing" in error_lower:
-                        st.error("API 配額不足，請檢查你的 OpenAI 帳戶")
-                    elif "model" in error_lower:
-                        st.error("模型不可用，請稍後再試")
+                    if "401" in error_str or "authentication" in error_str.lower():
+                        st.error("API Key 錯誤，請檢查是否正確")
+                    elif "429" in error_str or "quota" in error_str.lower():
+                        st.error("API 使用額度不足")
+                    elif "400" in error_str:
+                        st.error("請求格式錯誤")
                     else:
-                        st.error("請檢查網路連線或重新嘗試")
+                        st.error("請檢查網路連線和 API Key")
+                        st.text(f"詳細錯誤：{error_str[:100]}")
     else:
         st.info("請輸入 OpenAI API Key 才能使用 GPT 分析功能")
-        st.markdown("**如何獲取 API Key：**")
-        st.markdown("1. 前往 [OpenAI 官網](https://platform.openai.com)")
-        st.markdown("2. 註冊/登入帳戶")
-        st.markdown("3. 到 API Keys 頁面建立新的 API Key")
+        st.markdown("**取得 API Key：**")
+        st.markdown("1. 前往 https://platform.openai.com")
+        st.markdown("2. 註冊帳戶並建立 API Key")
 
-# 側邊欄資訊
+# 側邊欄
 with st.sidebar:
     st.markdown("### 使用說明")
-    st.markdown("1. 輸入 OpenAI API Key")
-    st.markdown("2. 上傳 CSV 或 Excel 檔案")
-    st.markdown("3. 選擇要分析的數值欄位")
-    st.markdown("4. 查看圖表和統計資訊")
-    st.markdown("5. 點擊產生 GPT 分析摘要")
+    st.markdown("1. 輸入 API Key")
+    st.markdown("2. 上傳資料檔案")
+    st.markdown("3. 選擇數值欄位")
+    st.markdown("4. 查看分析結果")
     
-    st.markdown("### 注意事項")
-    st.markdown("- 支援 CSV 和 Excel 格式")
-    st.markdown("- 需要包含數值欄位")
-    st.markdown("- API Key 不會被儲存")
-    st.markdown("- 大檔案可能需要較長處理時間")
+    st.markdown("### 支援格式")
+    st.markdown("- CSV 檔案")
+    st.markdown("- Excel 檔案")
+    st.markdown("- 需包含數值欄位")
