@@ -753,6 +753,7 @@ if uploaded_file is not None:
 
 else:
     # 功能說明
+    st.info("👆 請上傳檔案開始分析")
     with st.expander("🎯 功能說明"):
         st.markdown("""
         ### 基礎功能 (無需額外套件)
