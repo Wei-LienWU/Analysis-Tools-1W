@@ -5,14 +5,14 @@ import openai
 
 # Streamlit 網頁設定
 st.set_page_config(page_title="Analysis Tools 1W", layout="centered")
-st.title("📊 Analysis Tools 1W - 自動化報表生成平台")
+st.title("Analysis Tools 1W - 自動化報表生成平台")
 st.markdown("上傳 Excel 或 CSV 檔案，系統將自動生成圖表與 GPT 中文分析摘要。")
 
 # 輸入你的 OpenAI API Key
 openai_api_key = st.text_input("請輸入你的 OpenAI API Key", type="password")
 
 # 上傳檔案
-uploaded_file = st.file_uploader("📁 請上傳 Excel 或 CSV 檔案", type=["csv", "xlsx"])
+uploaded_file = st.file_uploader("請上傳 Excel 或 CSV 檔案", type=["csv", "xlsx"])
 
 if uploaded_file is not None:
     # 讀取資料
@@ -25,7 +25,7 @@ if uploaded_file is not None:
         st.error(f"檔案讀取失敗：{e}")
         st.stop()
 
-    st.subheader("📋 資料預覽")
+    st.subheader("資料預覽")
     st.dataframe(df.head())
 
     # 選擇欄位進行分析
@@ -34,17 +34,17 @@ if uploaded_file is not None:
         st.warning("找不到數值欄位，請確認資料內容。")
         st.stop()
 
-    selected_col = st.selectbox("📌 請選擇一個數值欄位進行圖表與摘要分析", numeric_cols)
+    selected_col = st.selectbox("請選擇一個數值欄位進行圖表與摘要分析", numeric_cols)
 
     # 繪圖
-    st.subheader("📈 自動生成圖表")
+    st.subheader("自動生成圖表")
     fig, ax = plt.subplots()
     df[selected_col].plot(kind='line', title=f"{selected_col} 數據趨勢", ax=ax)
     st.pyplot(fig)
 
     # GPT 分析摘要
     if openai_api_key:
-        st.subheader("🧠 GPT 中文分析摘要")
+        st.subheader("GPT 中文分析摘要")
 
         data_list = df[selected_col].dropna().tolist()[:100]  # 限制長度
         prompt = f"""
@@ -60,7 +60,7 @@ from openai import OpenAI
 if openai_api_key:
     client = OpenAI(api_key=openai_api_key)
 
-    if st.button("✨ 產生摘要"):
+    if st.button("產生摘要"):
         with st.spinner("GPT 正在撰寫摘要..."):
             try:
                 response = client.chat.completions.create(
@@ -71,7 +71,7 @@ if openai_api_key:
                     ]
                 )
                 summary = response.choices[0].message.content
-                st.success("✅ 分析完成")
+                st.success("分析完成")
                 st.markdown(summary)
             except Exception as e:
                 st.error(f"錯誤：{e}")
