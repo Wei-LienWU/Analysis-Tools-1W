@@ -9,7 +9,7 @@ st.title("📊 Analysis Tools 1W - 自動化報表生成平台")
 st.markdown("上傳 Excel 或 CSV 檔案，系統將自動生成圖表與 GPT 中文分析摘要。")
 
 # 輸入你的 OpenAI API Key
-openai_api_key = st.text_input("🔐 請輸入你的 OpenAI API Key", type="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")
+openai_api_key = st.text_input("🔐 請輸入你的 OpenAI API Key", type="passward")
 
 # 上傳檔案
 uploaded_file = st.file_uploader("📁 請上傳 Excel 或 CSV 檔案", type=["csv", "xlsx"])
