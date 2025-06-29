@@ -35,8 +35,8 @@ plt.rcParams['font.sans-serif'] = ['Microsoft JhengHei', 'SimHei', 'DejaVu Sans'
 plt.rcParams['axes.unicode_minus'] = False
 
 # 頁面設定
-st.set_page_config(page_title="Basic Data Analysis Tool — by William Wu", layout="wide")
-st.title("🔍 Basic Data Analysis Tool — by William Wu")
+st.set_page_config(page_title="BASIC DATA ANALYSIS TOOL — by William Wu", layout="wide")
+st.title("🔍 BASIC DATA ANALYSIS TOOL — by William Wu")
 st.markdown("上傳數據檔案，獲得專業分析報告 - 使用基礎 Python 套件")
 
 # 顯示套件狀態
