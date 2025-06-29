@@ -1,33 +1,24 @@
 # -*- coding: utf-8 -*-
+import sys
+import io
+
+# 強制 stdout/stderr 用 utf-8 編碼，避免 ASCII 編碼錯誤
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-import re
 from openai import OpenAI
 
-# 移除 emoji 函式
-def remove_emoji(text):
-    emoji_pattern = re.compile(
-        "["
-        "\U0001F600-\U0001F64F"  # emoticons
-        "\U0001F300-\U0001F5FF"  # symbols & pictographs
-        "\U0001F680-\U0001F6FF"  # transport & map symbols
-        "\U0001F1E0-\U0001F1FF"  # flags
-        "\U00002500-\U00002BEF"
-        "\U00002702-\U000027B0"
-        "\U000024C2-\U0001F251"
-        "]+", flags=re.UNICODE)
-    return emoji_pattern.sub(r'', text)
-
-# Page config
 st.set_page_config(page_title="Analysis Tools 1W", layout="centered")
 st.title("Analysis Tools 1W - Automated Report Generator")
 st.markdown("Upload an Excel or CSV file to automatically generate charts and GPT summary.")
 
-# API key input
+# User input API Key
 openai_api_key = st.text_input("Please enter your OpenAI API Key", type="password")
 
-# File uploader
+# File upload
 uploaded_file = st.file_uploader("Upload an Excel or CSV file", type=["csv", "xlsx"])
 
 if uploaded_file is not None:
@@ -43,7 +34,6 @@ if uploaded_file is not None:
     st.subheader("Data Preview")
     st.dataframe(df.head())
 
-    # Select numeric columns
     numeric_cols = df.select_dtypes(include="number").columns.tolist()
     if not numeric_cols:
         st.warning("No numeric columns found.")
@@ -51,13 +41,11 @@ if uploaded_file is not None:
 
     selected_col = st.selectbox("Please select the numeric column to analyze", numeric_cols)
 
-    # Plot chart
     st.subheader("Chart Display")
     fig, ax = plt.subplots()
     df[selected_col].plot(kind="line", ax=ax, title=f"{selected_col} Data Trend")
     st.pyplot(fig)
 
-    # GPT Analysis
     if openai_api_key:
         st.subheader("GPT Analysis Summary")
         data_list = df[selected_col].dropna().tolist()[:100]
@@ -78,11 +66,4 @@ Please write a brief analysis in English, including trend, average, maximum, min
                             {"role": "user", "content": prompt}
                         ]
                     )
-                    summary = response.choices[0].message.content
-                    summary_clean = remove_emoji(summary)
-                    st.success("Analysis complete")
-                    st.markdown(summary_clean)
-                except Exception as e:
-                    st.error(f"Error: {e}")
-    else:
-        st.info("Please enter API Key to enable GPT analysis.")
+                    summary = response.choi
