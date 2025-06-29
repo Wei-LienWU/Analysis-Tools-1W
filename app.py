@@ -1,24 +1,30 @@
 # -*- coding: utf-8 -*-
-import sys
-import io
-
-# 強制 stdout/stderr 用 utf-8 編碼，避免 ASCII 編碼錯誤
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
-
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+import re
 from openai import OpenAI
 
+# 移除 emoji 函式
+def remove_emoji(text):
+    emoji_pattern = re.compile(
+        "["
+        "\U0001F600-\U0001F64F"  # emoticons
+        "\U0001F300-\U0001F5FF"  # symbols & pictographs
+        "\U0001F680-\U0001F6FF"  # transport & map symbols
+        "\U0001F1E0-\U0001F1FF"  # flags
+        "]+", flags=re.UNICODE)
+    return emoji_pattern.sub(r'', text)
+
+# Streamlit 頁面設定
 st.set_page_config(page_title="Analysis Tools 1W", layout="centered")
 st.title("Analysis Tools 1W - Automated Report Generator")
 st.markdown("Upload an Excel or CSV file to automatically generate charts and GPT summary.")
 
-# User input API Key
+# 輸入 OpenAI API Key
 openai_api_key = st.text_input("Please enter your OpenAI API Key", type="password")
 
-# File upload
+# 上傳檔案
 uploaded_file = st.file_uploader("Upload an Excel or CSV file", type=["csv", "xlsx"])
 
 if uploaded_file is not None:
@@ -62,13 +68,15 @@ Please write a brief analysis in English, including trend, average, maximum, min
                     response = client.chat.completions.create(
                         model="gpt-4",
                         messages=[
-                            {"role": "system", "content": "You are a data analyst consultant skilled in English. Please do NOT use any emoji or special symbols in your response."},
+                            {
+                                "role": "system",
+                                "content": "You are a data analyst consultant skilled in English. Please do NOT use any emoji or special symbols in your response."
+                            },
                             {"role": "user", "content": prompt}
-                        ]
+                        ],
                     )
                     summary = response.choices[0].message.content
-                    # 移除所有非 ASCII 字元，避免編碼錯誤
-                    summary_clean = summary.encode('ascii', errors='ignore').decode()
+                    summary_clean = remove_emoji(summary)
                     st.success("Analysis complete")
                     st.markdown(summary_clean)
                 except Exception as e:
