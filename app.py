@@ -20,6 +20,7 @@ try:
     import plotly.express as px
     import plotly.graph_objects as go
     from plotly.subplots import make_subplots
+    import plotly.figure_factory as ff
     HAS_PLOTLY = True
 except ImportError:
     HAS_PLOTLY = False
@@ -35,8 +36,8 @@ plt.rcParams['font.sans-serif'] = ['Microsoft JhengHei', 'SimHei', 'DejaVu Sans'
 plt.rcParams['axes.unicode_minus'] = False
 
 # 頁面設定
-st.set_page_config(page_title="BASIC DATA ANALYSIS TOOL — by William Wu", layout="wide")
-st.title("🔍 BASIC DATA ANALYSIS TOOL — by William Wu")
+st.set_page_config(page_title="輕量級數據分析工具", layout="wide")
+st.title("🔍 輕量級數據分析工具")
 st.markdown("上傳數據檔案，獲得專業分析報告 - 使用基礎 Python 套件")
 
 # 顯示套件狀態
@@ -223,39 +224,267 @@ def create_plotly_charts(df, column):
     # 創建子圖
     fig = make_subplots(
         rows=2, cols=2,
-        subplot_titles=('數據趨勢', '分布直方圖', '箱型圖', '累積分布'),
+        subplot_titles=(
+            f'{column} - 數據趨勢', 
+            f'{column} - 分布直方圖', 
+            f'{column} - 箱型圖', 
+            f'{column} - 累積分布圖'
+        ),
         specs=[[{"secondary_y": False}, {"secondary_y": False}],
                [{"secondary_y": False}, {"secondary_y": False}]]
     )
     
-    # 趨勢圖
+    # 1. 趨勢圖
     fig.add_trace(
-        go.Scatter(y=data.values, mode='lines+markers', name='數值', 
-                  line=dict(width=2), marker=dict(size=4)),
+        go.Scatter(
+            x=list(range(len(data))),
+            y=data.values, 
+            mode='lines+markers', 
+            name='數值趨勢',
+            line=dict(width=2, color='#1f77b4'), 
+            marker=dict(size=4, color='#1f77b4'),
+            hovertemplate='<b>序號</b>: %{x}<br><b>數值</b>: %{y:.4f}<extra></extra>'
+        ),
         row=1, col=1
     )
     
-    # 直方圖
+    # 2. 直方圖
     fig.add_trace(
-        go.Histogram(x=data.values, nbinsx=30, name='分布', opacity=0.7),
+        go.Histogram(
+            x=data.values, 
+            nbinsx=min(30, len(data)//10), 
+            name='頻率分布', 
+            opacity=0.7,
+            marker_color='#ff7f0e',
+            hovertemplate='<b>區間</b>: %{x}<br><b>頻率</b>: %{y}<extra></extra>'
+        ),
         row=1, col=2
     )
     
-    # 箱型圖
+    # 3. 箱型圖
     fig.add_trace(
-        go.Box(y=data.values, name='箱型圖', boxpoints='outliers'),
+        go.Box(
+            y=data.values, 
+            name='箱型圖', 
+            boxpoints='outliers',
+            marker_color='#2ca02c',
+            hovertemplate='<b>數值</b>: %{y:.4f}<extra></extra>'
+        ),
         row=2, col=1
     )
     
-    # 累積分布
+    # 4. 累積分布圖
     sorted_data = np.sort(data)
     cumulative = np.arange(1, len(sorted_data) + 1) / len(sorted_data)
     fig.add_trace(
-        go.Scatter(x=sorted_data, y=cumulative, mode='lines', name='累積分布'),
+        go.Scatter(
+            x=sorted_data, 
+            y=cumulative, 
+            mode='lines', 
+            name='累積分布',
+            line=dict(width=3, color='#d62728'),
+            hovertemplate='<b>數值</b>: %{x:.4f}<br><b>累積機率</b>: %{y:.3f}<extra></extra>'
+        ),
         row=2, col=2
     )
     
-    fig.update_layout(height=800, showlegend=False, title_text=f"📊 {column} 完整分析")
+    # 更新佈局
+    fig.update_layout(
+        height=800, 
+        showlegend=False, 
+        title_text=f"📊 {column} 完整互動分析",
+        title_x=0.5,
+        title_font_size=20,
+        template="plotly_white"
+    )
+    
+    # 更新座標軸標籤
+    fig.update_xaxes(title_text="觀測序號", row=1, col=1)
+    fig.update_yaxes(title_text="數值", row=1, col=1)
+    fig.update_xaxes(title_text="數值", row=1, col=2)
+    fig.update_yaxes(title_text="頻率", row=1, col=2)
+    fig.update_yaxes(title_text="數值", row=2, col=1)
+    fig.update_xaxes(title_text="數值", row=2, col=2)
+    fig.update_yaxes(title_text="累積機率", row=2, col=2)
+    
+    return fig
+
+def create_advanced_plotly_charts(df, column):
+    """創建進階 Plotly 圖表"""
+    if not HAS_PLOTLY:
+        return None
+    
+    data = df[column].dropna()
+    
+    # 創建更多樣化的圖表組合
+    fig = make_subplots(
+        rows=3, cols=2,
+        subplot_titles=(
+            f'{column} - 時間序列', 
+            f'{column} - 密度分布',
+            f'{column} - 小提琴圖',
+            f'{column} - 散點圖 (vs 索引)',
+            f'{column} - 移動平均',
+            f'{column} - 分位數-分位數圖'
+        ),
+        specs=[[{"secondary_y": False}, {"secondary_y": False}],
+               [{"secondary_y": False}, {"secondary_y": False}],
+               [{"secondary_y": False}, {"secondary_y": False}]]
+    )
+    
+    # 1. 時間序列圖 (帶趨勢線)
+    x_vals = list(range(len(data)))
+    fig.add_trace(
+        go.Scatter(
+            x=x_vals, y=data.values, 
+            mode='lines+markers', name='原始數據',
+            line=dict(width=1.5, color='blue'),
+            marker=dict(size=3),
+            opacity=0.7
+        ), row=1, col=1
+    )
+    
+    # 添加趨勢線
+    z = np.polyfit(x_vals, data.values, 1)
+    p = np.poly1d(z)
+    fig.add_trace(
+        go.Scatter(
+            x=x_vals, y=p(x_vals),
+            mode='lines', name='趨勢線',
+            line=dict(width=2, color='red', dash='dash')
+        ), row=1, col=1
+    )
+    
+    # 2. 密度分布圖
+    try:
+        hist_data = [data.values]
+        group_labels = [column]
+        density_fig = ff.create_distplot(hist_data, group_labels, show_hist=False, show_rug=False)
+        for trace in density_fig.data:
+            fig.add_trace(trace, row=1, col=2)
+    except:
+        # 如果 create_distplot 失敗，使用基本直方圖
+        fig.add_trace(
+            go.Histogram(x=data.values, opacity=0.7, nbinsx=30), 
+            row=1, col=2
+        )
+    
+    # 3. 小提琴圖
+    fig.add_trace(
+        go.Violin(
+            y=data.values, 
+            box_visible=True, 
+            line_color='black',
+            meanline_visible=True,
+            fillcolor='lightseagreen', 
+            opacity=0.6,
+            name="小提琴圖"
+        ), row=2, col=1
+    )
+    
+    # 4. 散點圖 (數值 vs 索引)
+    colors = data.values  # 用數值本身來著色
+    fig.add_trace(
+        go.Scatter(
+            x=x_vals, y=data.values,
+            mode='markers',
+            marker=dict(
+                size=8,
+                color=colors,
+                colorscale='Viridis',
+                showscale=True,
+                colorbar=dict(title="數值大小")
+            ),
+            name="數值散點"
+        ), row=2, col=2
+    )
+    
+    # 5. 移動平均
+    window_size = max(5, len(data) // 20)
+    moving_avg = pd.Series(data.values).rolling(window=window_size).mean()
+    
+    fig.add_trace(
+        go.Scatter(
+            x=x_vals, y=data.values,
+            mode='lines', name='原始數據',
+            line=dict(width=1, color='lightblue'),
+            opacity=0.5
+        ), row=3, col=1
+    )
+    
+    fig.add_trace(
+        go.Scatter(
+            x=x_vals, y=moving_avg,
+            mode='lines', name=f'{window_size}期移動平均',
+            line=dict(width=3, color='darkblue')
+        ), row=3, col=1
+    )
+    
+    # 6. Q-Q 圖
+    sorted_data = np.sort(data)
+    theoretical_quantiles = np.linspace(0, 1, len(sorted_data))
+    
+    fig.add_trace(
+        go.Scatter(
+            x=theoretical_quantiles, y=sorted_data,
+            mode='markers', name='Q-Q 圖',
+            marker=dict(size=4, color='purple'),
+            hovertemplate='<b>理論分位數</b>: %{x:.3f}<br><b>實際數值</b>: %{y:.4f}<extra></extra>'
+        ), row=3, col=2
+    )
+    
+    # 添加 Q-Q 圖的參考線
+    fig.add_trace(
+        go.Scatter(
+            x=[0, 1], y=[sorted_data.min(), sorted_data.max()],
+            mode='lines', name='參考線',
+            line=dict(width=2, color='red', dash='dash')
+        ), row=3, col=2
+    )
+    
+    # 更新佈局
+    fig.update_layout(
+        height=1200, 
+        showlegend=False,
+        title_text=f"📊 {column} 進階互動分析",
+        title_x=0.5,
+        title_font_size=20,
+        template="plotly_white"
+    )
+    
+    return fig
+
+def create_correlation_heatmap(df):
+    """創建相關性熱力圖"""
+    if not HAS_PLOTLY:
+        return None
+    
+    numeric_cols = df.select_dtypes(include=[np.number]).columns
+    if len(numeric_cols) < 2:
+        return None
+    
+    corr_matrix = df[numeric_cols].corr()
+    
+    fig = go.Figure(data=go.Heatmap(
+        z=corr_matrix.values,
+        x=corr_matrix.columns,
+        y=corr_matrix.columns,
+        colorscale='RdBu',
+        zmid=0,
+        text=np.around(corr_matrix.values, decimals=3),
+        texttemplate="%{text}",
+        textfont={"size": 10},
+        hoverongaps=False,
+        hovertemplate='<b>%{x}</b> vs <b>%{y}</b><br>相關係數: %{z:.3f}<extra></extra>'
+    ))
+    
+    fig.update_layout(
+        title="📊 變數相關性熱力圖",
+        title_x=0.5,
+        width=600,
+        height=600
+    )
+    
     return fig
 
 # 檔案上傳
@@ -313,7 +542,7 @@ if uploaded_file is not None:
     selected_col = st.selectbox("🎯 請選擇要分析的數值欄位", numeric_cols)
 
     # 建立分頁
-    tab1, tab2, tab3, tab4 = st.tabs(["📊 基本統計", "📈 圖表分析", "🔍 深度洞察", "📝 完整報告"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 基本統計", "📈 圖表分析", "🚀 進階圖表", "🔍 深度洞察", "📝 完整報告"])
     
     with tab1:
         st.subheader("📊 基本統計資訊")
@@ -356,19 +585,22 @@ if uploaded_file is not None:
         st.dataframe(percentile_df, use_container_width=True)
 
     with tab2:
-        st.subheader("📈 圖表分析")
+        st.subheader("📈 基礎圖表分析")
         
         # 選擇圖表類型
-        chart_type = st.radio("選擇圖表類型", ["Matplotlib 圖表", "Plotly 互動圖表"] if HAS_PLOTLY else ["Matplotlib 圖表"])
+        if HAS_PLOTLY:
+            chart_type = st.radio("選擇圖表類型", ["Plotly 互動圖表", "Matplotlib 圖表"])
+        else:
+            chart_type = "Matplotlib 圖表"
+            st.info("💡 安裝 Plotly 以使用互動圖表功能")
         
-        if chart_type == "Matplotlib 圖表":
-            fig = create_matplotlib_charts(df, selected_col)
-            st.pyplot(fig)
-        
-        elif chart_type == "Plotly 互動圖表" and HAS_PLOTLY:
+        if chart_type == "Plotly 互動圖表" and HAS_PLOTLY:
             fig = create_plotly_charts(df, selected_col)
             if fig:
                 st.plotly_chart(fig, use_container_width=True)
+        else:
+            fig = create_matplotlib_charts(df, selected_col)
+            st.pyplot(fig)
         
         # 異常值分析
         st.subheader("⚠️ 異常值分析")
@@ -393,6 +625,34 @@ if uploaded_file is not None:
             st.dataframe(outlier_df.head(20), use_container_width=True)
 
     with tab3:
+        st.subheader("🚀 進階互動圖表")
+        
+        if HAS_PLOTLY:
+            # 進階圖表
+            advanced_fig = create_advanced_plotly_charts(df, selected_col)
+            if advanced_fig:
+                st.plotly_chart(advanced_fig, use_container_width=True)
+            
+            # 相關性分析圖表
+            if len(numeric_cols) > 1:
+                st.subheader("🔗 相關性熱力圖")
+                corr_fig = create_correlation_heatmap(df)
+                if corr_fig:
+                    st.plotly_chart(corr_fig, use_container_width=True)
+                    
+                # 散點圖矩陣（如果變數不太多）
+                if len(numeric_cols) <= 5:
+                    st.subheader("📊 散點圖矩陣")
+                    scatter_fig = px.scatter_matrix(df[numeric_cols], 
+                                                   title="變數關係散點圖矩陣",
+                                                   height=600)
+                    scatter_fig.update_traces(diagonal_visible=False)
+                    st.plotly_chart(scatter_fig, use_container_width=True)
+        else:
+            st.warning("⚠️ 需要安裝 Plotly 才能使用進階互動圖表功能")
+            st.code("pip install plotly", language="bash")
+
+    with tab4:
         st.subheader("🔍 智能數據洞察")
         
         # 生成洞察
@@ -445,7 +705,7 @@ if uploaded_file is not None:
                     corr_df = pd.DataFrame(correlation_data)
                     st.dataframe(corr_df, use_container_width=True)
 
-    with tab4:
+    with tab5:
         st.subheader("📝 完整分析報告")
         
         # 生成報告
@@ -533,6 +793,7 @@ else:
         - 📊 統計檢定 (需要 SciPy)
         - 📈 互動圖表 (需要 Plotly)
         - 🎨 美化圖表 (需要 Seaborn)
+        - 🚀 進階視覺化 (需要 Plotly)
         """)
 
 # 側邊欄
@@ -558,9 +819,20 @@ with st.sidebar:
     st.markdown("• 📈 多種圖表類型")
     st.markdown("• ⚠️ 異常值檢測")
     st.markdown("• 📝 專業報告生成")
+    st.markdown("• 🚀 進階互動圖表")
     
     st.markdown("### 💡 使用建議")
     st.markdown("• 先用基礎功能測試")
     st.markdown("• 需要時安裝額外套件")
     st.markdown("• 查看套件狀態指示")
     st.markdown("• 下載報告保存結果")
+    st.markdown("• 探索進階互動功能")
+    
+    if HAS_PLOTLY:
+        st.markdown("### 🎨 Plotly 功能")
+        st.markdown("• 🎯 互動式圖表")
+        st.markdown("• 📊 動態縮放")
+        st.markdown("• 🔍 懸停詳細資訊")
+        st.markdown("• 🎪 多種圖表類型")
+        st.markdown("• 🌈 美觀配色方案")
+        st.markdown("• 📱 響應式設計")
