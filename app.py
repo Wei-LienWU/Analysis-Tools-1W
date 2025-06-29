@@ -150,12 +150,12 @@ if uploaded_file is not None:
                     # 獲取回應
                     summary = response.choices[0].message.content
                     
-                    st.success("✅ 分析完成！")
-                    st.markdown("### 📊 GPT 分析結果")
+                    st.success("分析完成！")
+                    st.markdown("### GPT 分析結果")
                     st.markdown(summary)
                     
                 except Exception as e:
-                    st.error(f"❌ GPT 分析失敗：{str(e)}")
+                    st.error(f"GPT 分析失敗：{str(e)}")
                     
                     # 提供詳細錯誤資訊
                     if "authentication" in str(e).lower():
@@ -167,7 +167,7 @@ if uploaded_file is not None:
                     else:
                         st.error("請檢查網路連線或 API Key 設定")
     else:
-        st.info("💡 請輸入 OpenAI API Key 才能使用 GPT 分析功能")
+        st.info("請輸入 OpenAI API Key 才能使用 GPT 分析功能")
         st.markdown("**如何獲取 API Key：**")
         st.markdown("1. 前往 [OpenAI 官網](https://platform.openai.com)")
         st.markdown("2. 註冊/登入帳戶")
@@ -175,14 +175,14 @@ if uploaded_file is not None:
 
 # 側邊欄資訊
 with st.sidebar:
-    st.markdown("### 📋 使用說明")
+    st.markdown("### 使用說明")
     st.markdown("1. 輸入 OpenAI API Key")
     st.markdown("2. 上傳 CSV 或 Excel 檔案")
     st.markdown("3. 選擇要分析的數值欄位")
     st.markdown("4. 查看圖表和統計資訊")
     st.markdown("5. 點擊產生 GPT 分析摘要")
     
-    st.markdown("### ⚠️ 注意事項")
+    st.markdown("### 注意事項")
     st.markdown("- 支援 CSV 和 Excel 格式")
     st.markdown("- 需要包含數值欄位")
     st.markdown("- API Key 不會被儲存")
