@@ -113,55 +113,52 @@ if uploaded_file is not None:
         
         if st.button("產生 GPT 分析摘要"):
             with st.spinner("正在生成分析摘要，請稍候..."):
-                try:
-                    # 動態導入 OpenAI
+                
+                # 定義分析函數，完全隔離 OpenAI 調用
+                def call_openai_safe():
+                    import os
+                    os.environ['PYTHONIOENCODING'] = 'utf-8'
+                    
                     from openai import OpenAI
                     
-                    # 創建簡單的英文提示
-                    simple_prompt = f"Analyze this data: mean={mean_val}, median={median_val}, std={std_val}, min={min_val}, max={max_val}, count={count_val}. Sample values: {sample_data}. Provide analysis in Traditional Chinese, about 200 words."
+                    # 只使用基本 ASCII 字符的 prompt
+                    basic_prompt = f"Data analysis: mean={mean_val}, median={median_val}, std={std_val}, min={min_val}, max={max_val}, count={count_val}. Please analyze in Traditional Chinese."
                     
-                    # 初始化客戶端
                     client = OpenAI(api_key=openai_api_key)
                     
-                    # 發送請求
                     response = client.chat.completions.create(
                         model="gpt-3.5-turbo",
                         messages=[
-                            {"role": "system", "content": "You are a data analyst. Respond in Traditional Chinese."},
-                            {"role": "user", "content": simple_prompt}
+                            {"role": "system", "content": "Data analyst. Reply in Traditional Chinese."},
+                            {"role": "user", "content": basic_prompt}
                         ],
-                        max_tokens=400,
-                        temperature=0.5
+                        max_tokens=300
                     )
                     
-                    # 獲取並顯示結果
-                    summary = response.choices[0].message.content
+                    return response.choices[0].message.content
+                
+                try:
+                    result = call_openai_safe()
+                    st.success("分析完成")
                     
-                    st.success("分析完成！")
-                    st.markdown("### GPT 分析結果")
+                    # 分段顯示結果，避免編碼問題
+                    st.markdown("### 分析結果")
                     
-                    # 安全顯示結果
+                    # 嘗試多種顯示方式
                     try:
-                        st.markdown(summary)
+                        st.write(result)
                     except:
-                        st.text(summary)
-                    
-                except ImportError:
-                    st.error("請安裝 openai 套件：pip install openai")
-                except Exception as e:
-                    # 簡化錯誤處理
-                    error_str = str(e)
-                    st.error("GPT 分析失敗")
-                    
-                    if "401" in error_str or "authentication" in error_str.lower():
-                        st.error("API Key 錯誤，請檢查是否正確")
-                    elif "429" in error_str or "quota" in error_str.lower():
-                        st.error("API 使用額度不足")
-                    elif "400" in error_str:
-                        st.error("請求格式錯誤")
-                    else:
-                        st.error("請檢查網路連線和 API Key")
-                        st.text(f"詳細錯誤：{error_str[:100]}")
+                        try:
+                            st.text(result)
+                        except:
+                            st.info("分析完成，但顯示時發生編碼問題")
+                            
+                except Exception:
+                    st.error("分析失敗")
+                    st.info("可能的原因：")
+                    st.info("1. API Key 不正確")
+                    st.info("2. 網路連線問題") 
+                    st.info("3. API 額度不足")
     else:
         st.info("請輸入 OpenAI API Key 才能使用 GPT 分析功能")
         st.markdown("**取得 API Key：**")
