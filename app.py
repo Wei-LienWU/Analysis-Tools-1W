@@ -4,61 +4,69 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from openai import OpenAI
 
+# Page settings
 st.set_page_config(page_title="Analysis Tools 1W", layout="centered")
-st.title("Analysis Tools 1W - 自動化報表生成平台")
-st.markdown("上傳 Excel 或 CSV 檔案，系統將自動生成圖表與 GPT 中文分析摘要。")
+st.title("Analysis Tools 1W - Automated Report Generator")
+st.markdown("Upload an Excel or CSV file to automatically generate charts and GPT summary.")
 
-openai_api_key = st.text_input("請輸入你的 OpenAI API Key", type="password")
-uploaded_file = st.file_uploader("請上傳 Excel 或 CSV 檔案", type=["csv", "xlsx"])
+# User inputs API Key
+openai_api_key = st.text_input("Please enter your OpenAI API Key", type="password")
+
+# File upload
+uploaded_file = st.file_uploader("Upload an Excel or CSV file", type=["csv", "xlsx"])
 
 if uploaded_file is not None:
     try:
-        if uploaded_file.name.endswith('.csv'):
+        if uploaded_file.name.endswith(".csv"):
             df = pd.read_csv(uploaded_file)
         else:
             df = pd.read_excel(uploaded_file)
     except Exception as e:
-        st.error(f"檔案讀取失敗：{e}")
+        st.error(f"Failed to read the file: {e}")
         st.stop()
 
-    st.subheader("資料預覽")
+    st.subheader("Data Preview")
     st.dataframe(df.head())
 
+    # Select numeric columns
     numeric_cols = df.select_dtypes(include="number").columns.tolist()
     if not numeric_cols:
-        st.warning("找不到數值欄位，請確認資料內容。")
+        st.warning("No numeric columns found.")
         st.stop()
 
-    selected_col = st.selectbox("請選擇一個數值欄位進行圖表與摘要分析", numeric_cols)
+    selected_col = st.selectbox("Please select the numeric column to analyze", numeric_cols)
 
-    st.subheader("自動生成圖表")
+    # Show chart
+    st.subheader("Chart Display")
     fig, ax = plt.subplots()
-    df[selected_col].plot(kind='line', title=f"{selected_col} 數據趨勢", ax=ax)
+    df[selected_col].plot(kind="line", ax=ax, title=f"{selected_col} Data Trend")
     st.pyplot(fig)
 
+    # GPT analysis
     if openai_api_key:
-        st.subheader("GPT 中文分析摘要")
+        st.subheader("GPT Analysis Summary")
         data_list = df[selected_col].dropna().tolist()[:100]
         prompt = f"""
-你是一位數據分析師。根據以下數據欄位 {selected_col} 的數值列表：
+You are a data analyst. Based on the following values in the column '{selected_col}':
 {data_list}
-請用繁體中文撰寫一段簡潔的分析摘要，包含趨勢變化、平均值、最高與最低值，並給出一項建議。
+Please write a brief analysis in English, including trend, average, maximum, minimum values, and provide recommendations.
 """
-        if st.button("產生摘要"):
-            with st.spinner("GPT 正在撰寫摘要..."):
+
+        if st.button("Generate Summary"):
+            with st.spinner("Generating, please wait..."):
                 try:
                     client = OpenAI(api_key=openai_api_key)
                     response = client.chat.completions.create(
                         model="gpt-4",
                         messages=[
-                            {"role": "system", "content": "你是一位善於中文資料分析的專業顧問。"},
+                            {"role": "system", "content": "You are a data analyst consultant skilled in English."},
                             {"role": "user", "content": prompt}
                         ]
                     )
                     summary = response.choices[0].message.content
-                    st.success("分析完成")
+                    st.success("Analysis complete")
                     st.markdown(summary)
                 except Exception as e:
-                    st.error(f"錯誤：{e}")
+                    st.error(f"Error: {e}")
     else:
-        st.info("請輸入 OpenAI API Key 以啟用 GPT 分析摘要功能。")
+        st.info("Please enter API Key to enable GPT analysis.")
