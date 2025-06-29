@@ -105,7 +105,7 @@ if uploaded_file is not None:
 你是一位專業的數據分析師。請根據以下資料進行分析：
 
 欄位名稱：{selected_col}
-統計摘要：
+統計摘要:
 - 平均值：{data_summary['平均值']}
 - 中位數：{data_summary['中位數']}
 - 標準差：{data_summary['標準差']}
