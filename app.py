@@ -76,7 +76,8 @@ if uploaded_file is not None:
     ax1.set_ylabel(selected_col)
     
     # 直方圖
-    df[selected_col].hist(ax=ax2, bins=20, title=f"{selected_col} 分布")
+    df[selected_col].hist(ax=ax2, bins=20)
+    ax2.set_title(f"{selected_col} 分布")
     ax2.set_xlabel(selected_col)
     ax2.set_ylabel("頻率")
     
