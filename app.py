@@ -102,70 +102,79 @@ if uploaded_file is not None:
         sample_data = df[selected_col].dropna().head(50).tolist()
         
         prompt = f"""
-你是一位專業的數據分析師。請根據以下資料進行分析：
+Analyze the following data for column: {clean_selected_col if 'clean_selected_col' in locals() else selected_col}
 
-欄位名稱：{selected_col}
-統計摘要:
-- 平均值：{data_summary['平均值']}
-- 中位數：{data_summary['中位數']}
-- 標準差：{data_summary['標準差']}
-- 最小值：{data_summary['最小值']}
-- 最大值：{data_summary['最大值']}
-- 資料筆數：{data_summary['資料筆數']}
+Statistics:
+- Mean: {data_summary['平均值']}
+- Median: {data_summary['中位數']}
+- Std Dev: {data_summary['標準差']}
+- Min: {data_summary['最小值']}
+- Max: {data_summary['最大值']}
+- Count: {data_summary['資料筆數']}
 
-部分資料樣本：{sample_data}
+Sample data: {sample_data}
 
-請用繁體中文撰寫簡要分析報告，包括：
-1. 數據的整體趨勢和特徵
-2. 數據的分散程度
-3. 是否有異常值
-4. 實務上的建議或洞察
+Please provide analysis in Traditional Chinese including:
+1. Overall trends and characteristics
+2. Data distribution
+3. Any outliers
+4. Practical recommendations
 
-請保持簡潔專業，約200-300字。
+Keep it concise, around 200-300 words.
 """
         
         if st.button("產生 GPT 分析摘要"):
             with st.spinner("正在生成分析摘要，請稍候..."):
                 try:
+                    # 清理 prompt 中的特殊字符
+                    clean_prompt = prompt.encode('utf-8', errors='ignore').decode('utf-8')
+                    clean_selected_col = selected_col.encode('ascii', errors='ignore').decode('ascii')
+                    if not clean_selected_col:
+                        clean_selected_col = "selected_column"
+                    
                     # 初始化 OpenAI 客戶端
                     client = OpenAI(api_key=openai_api_key)
                     
                     # 發送請求
                     response = client.chat.completions.create(
-                        model="gpt-4o-mini",  # 使用較便宜的模型
+                        model="gpt-4o-mini",
                         messages=[
                             {
                                 "role": "system", 
-                                "content": "你是一位專業的數據分析師，擅長用繁體中文撰寫清晰易懂的數據分析報告。"
+                                "content": "You are a professional data analyst. Please provide analysis in Traditional Chinese."
                             },
                             {
                                 "role": "user", 
-                                "content": prompt
+                                "content": clean_prompt
                             }
                         ],
                         max_tokens=500,
                         temperature=0.7
                     )
                     
-                    # 獲取回應
+                    # 獲取回應並清理
                     summary = response.choices[0].message.content
+                    if summary:
+                        summary = summary.encode('utf-8', errors='ignore').decode('utf-8')
                     
                     st.success("分析完成！")
                     st.markdown("### GPT 分析結果")
                     st.markdown(summary)
                     
                 except Exception as e:
-                    st.error(f"GPT 分析失敗：{str(e)}")
+                    error_msg = str(e).encode('ascii', errors='ignore').decode('ascii')
+                    st.error(f"GPT 分析失敗：{error_msg}")
                     
                     # 提供詳細錯誤資訊
-                    if "authentication" in str(e).lower():
+                    error_lower = error_msg.lower()
+                    if "authentication" in error_lower or "unauthorized" in error_lower:
                         st.error("請檢查 API Key 是否正確")
-                    elif "quota" in str(e).lower():
+                    elif "quota" in error_lower or "billing" in error_lower:
                         st.error("API 配額不足，請檢查你的 OpenAI 帳戶")
-                    elif "model" in str(e).lower():
+                    elif "model" in error_lower:
                         st.error("模型不可用，請稍後再試")
                     else:
-                        st.error("請檢查網路連線或 API Key 設定")
+                        st.error("請檢查網路連線或重新嘗試")
     else:
         st.info("請輸入 OpenAI API Key 才能使用 GPT 分析功能")
         st.markdown("**如何獲取 API Key：**")
