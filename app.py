@@ -16,15 +16,12 @@ def remove_emoji(text):
         "]+", flags=re.UNICODE)
     return emoji_pattern.sub(r'', text)
 
-# Streamlit 頁面設定
 st.set_page_config(page_title="Analysis Tools 1W", layout="centered")
 st.title("Analysis Tools 1W - Automated Report Generator")
 st.markdown("Upload an Excel or CSV file to automatically generate charts and GPT summary.")
 
-# 輸入 OpenAI API Key
 openai_api_key = st.text_input("Please enter your OpenAI API Key", type="password")
 
-# 上傳檔案
 uploaded_file = st.file_uploader("Upload an Excel or CSV file", type=["csv", "xlsx"])
 
 if uploaded_file is not None:
